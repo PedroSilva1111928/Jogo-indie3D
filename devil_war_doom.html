@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEVIL WAR DOOM - Labirinto Infernal</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Creepster&family=Share+Tech+Mono&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            overflow: hidden;
+            background: #000;
+            font-family: 'Share Tech Mono', monospace;
+            color: #fff;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #game-canvas {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+        }
+
+        /* ── HUD inferior ── */
+        #ui {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 150px;
+            background: linear-gradient(transparent, rgba(0,0,0,0.9));
+            pointer-events: none;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+        }
+
+        #weapon-container {
+            position: relative;
+            width: 300px;
+            height: 140px;
+            display: flex;
+            justify-content: center;
+        }
+
+        #weapon {
+            height: 130px;
+            image-rendering: pixelated;
+            transform: translateY(10px);
+            transition: transform 0.08s ease;
+            filter: drop-shadow(0 0 10px #f00a);
+        }
+
+        #weapon.firing { transform: translateY(18px) translateX(6px) rotate(3deg); }
+
+        /* ── Stats ── */
+        #stats {
+            position: absolute;
+            bottom: 12px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 0 0 8px currentColor, 2px 2px 0 #000;
+            letter-spacing: 1px;
+        }
+
+        .stat-icon { width: 22px; height: 22px; border-radius: 3px; }
+        #health { color: #f33; }
+        #health .stat-icon { background: #f33; box-shadow: 0 0 8px #f33; }
+        #ammo   { color: #ff3; }
+        #ammo   .stat-icon { background: #ff3; box-shadow: 0 0 8px #ff3; }
+
+        /* Barra de vida */
+        #health-bar-wrap {
+            position: absolute;
+            bottom: 90px;
+            left: 20px;
+            width: 200px;
+            height: 8px;
+            background: #300;
+            border: 1px solid #f33;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        #health-bar { height: 100%; background: linear-gradient(to right, #f00, #f55); transition: width 0.3s; }
+
+        /* ── Info de nível ── */
+        #level-info {
+            position: absolute;
+            bottom: 12px;
+            right: 180px;
+            font-size: 14px;
+            color: #f884;
+            text-align: right;
+        }
+
+        /* ── Kill counter ── */
+        #kill-counter {
+            position: absolute;
+            top: 10px;
+            left: 180px;
+            font-size: 14px;
+            color: #f004;
+            background: rgba(0,0,0,0.5);
+            padding: 4px 8px;
+            border-radius: 3px;
+            transition: color 0.3s;
+        }
+        #kill-counter.flash { color: #f00; text-shadow: 0 0 8px #f00; }
+
+        /* ── Mensagem central ── */
+        #center-msg {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 22px;
+            color: #ff0;
+            text-shadow: 0 0 10px #ff0;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 20;
+            letter-spacing: 2px;
+        }
+
+        /* ── Tela de início ── */
+        #start-screen {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at center, #1a0000 0%, #000 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            padding: 20px;
+        }
+
+        #title {
+            font-family: 'Creepster', cursive;
+            font-size: clamp(48px, 8vw, 80px);
+            color: #f00;
+            margin-bottom: 10px;
+            text-shadow: 0 0 30px #f00, 6px 6px 0 #500;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            text-align: center;
+            animation: pulse-title 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-title {
+            0%, 100% { text-shadow: 0 0 20px #f00, 6px 6px 0 #500; }
+            50%       { text-shadow: 0 0 50px #f00, 6px 6px 0 #800; }
+        }
+
+        #subtitle {
+            font-size: 14px;
+            color: #f664;
+            letter-spacing: 6px;
+            margin-bottom: 40px;
+            text-transform: uppercase;
+        }
+
+        #start-button, #restart-button, .menu-btn {
+            padding: 16px 50px;
+            font-size: 22px;
+            background: linear-gradient(to bottom, #600, #300);
+            color: #fff;
+            border: 2px solid #f00;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Share Tech Mono', monospace;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-top: 20px;
+            transition: all 0.2s ease;
+            box-shadow: 0 0 20px #f005, inset 0 0 10px #f001;
+        }
+
+        #start-button:hover, #restart-button:hover, .menu-btn:hover {
+            background: linear-gradient(to bottom, #900, #500);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 30px #f008;
+        }
+
+        #instructions {
+            margin-top: 30px;
+            text-align: center;
+            color: #888;
+            font-size: 15px;
+            max-width: 560px;
+            line-height: 1.8;
+        }
+
+        .key-hint {
+            display: inline-block;
+            background: #222;
+            border: 1px solid #555;
+            border-radius: 3px;
+            padding: 1px 6px;
+            font-size: 13px;
+            color: #ccc;
+        }
+
+        /* ── Loading ── */
+        #loading {
+            position: absolute;
+            inset: 0;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 101;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        #loading-title {
+            font-family: 'Creepster', cursive;
+            font-size: 40px;
+            color: #f00;
+            text-shadow: 0 0 20px #f00;
+            letter-spacing: 4px;
+        }
+
+        #loading-bar-container {
+            width: 300px; height: 18px;
+            background: #111;
+            border: 2px solid #f00;
+            border-radius: 9px;
+            overflow: hidden;
+        }
+
+        #loading-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(to right, #500, #f00, #f55);
+            transition: width 0.4s ease;
+            box-shadow: 0 0 10px #f00;
+        }
+
+        #loading-text { font-size: 16px; color: #f006; letter-spacing: 2px; }
+
+        /* ── Mira ── */
+        #crosshair {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 24px; height: 24px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 10;
+            display: none;
+            transition: filter 0.1s;
+        }
+        #crosshair.hit { filter: drop-shadow(0 0 4px #f00); }
+
+        /* ── Game Over / Level Complete ── */
+        #game-over, #level-complete {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 99;
+            gap: 12px;
+        }
+
+        #game-over h2 {
+            font-family: 'Creepster', cursive;
+            font-size: 64px;
+            color: #f00;
+            text-shadow: 0 0 20px #f00;
+            animation: flicker 0.8s infinite;
+        }
+
+        @keyframes flicker {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.7; }
+        }
+
+        #level-complete h2 {
+            font-family: 'Creepster', cursive;
+            font-size: 60px;
+            color: #0f0;
+            text-shadow: 0 0 20px #0f0;
+        }
+
+        #game-over p, #level-complete p { color: #aaa; font-size: 16px; }
+
+        #level-complete .score-box {
+            margin: 10px 0;
+            padding: 12px 30px;
+            border: 1px solid #0f04;
+            color: #0f0;
+            font-size: 18px;
+            letter-spacing: 2px;
+        }
+
+        /* ── Mini-mapa ── */
+        #map-container {
+            position: absolute;
+            top: 16px; right: 16px;
+            width: 150px; height: 150px;
+            background: rgba(0,0,0,0.75);
+            border: 2px solid #f005;
+            border-radius: 4px;
+            z-index: 5;
+        }
+
+        #mini-map { width: 100%; height: 100%; image-rendering: pixelated; }
+
+        /* ── FPS ── */
+        #fps-counter {
+            position: absolute;
+            top: 8px; left: 8px;
+            color: #0f08;
+            font-size: 13px;
+            z-index: 10;
+            background: rgba(0,0,0,0.4);
+            padding: 3px 7px;
+            border-radius: 3px;
+        }
+
+        /* ── Flash de dano ── */
+        #damage-flash {
+            position: absolute;
+            inset: 0;
+            background: #f000;
+            pointer-events: none;
+            z-index: 8;
+            transition: background 0.15s;
+        }
+        #damage-flash.active { background: #f003; }
+
+        /* ── Ponteiro bloqueado ── */
+        #pointer-hint {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff5;
+            font-size: 14px;
+            pointer-events: none;
+            letter-spacing: 2px;
+            z-index: 9;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div id="loading">
+    <div id="loading-title">☠ DEVIL WAR DOOM ☠</div>
+    <div id="loading-text">CARREGANDO... 0%</div>
+    <div id="loading-bar-container">
+        <div id="loading-bar"></div>
+    </div>
+</div>
+
+<div id="game-container">
+    <canvas id="game-canvas"></canvas>
+    <div id="damage-flash"></div>
+
+    <div id="fps-counter">FPS: 0</div>
+    <div id="kill-counter">☠ MORTOS: 0</div>
+
+    <div id="map-container">
+        <canvas id="mini-map"></canvas>
+    </div>
+
+    <div id="crosshair">
+        <svg width="24" height="24" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="2" fill="rgba(255,50,50,0.8)"/>
+            <line x1="12" y1="2"  x2="12" y2="8"  stroke="#f55" stroke-width="1.5"/>
+            <line x1="12" y1="16" x2="12" y2="22" stroke="#f55" stroke-width="1.5"/>
+            <line x1="2"  y1="12" x2="8"  y2="12" stroke="#f55" stroke-width="1.5"/>
+            <line x1="16" y1="12" x2="22" y2="12" stroke="#f55" stroke-width="1.5"/>
+        </svg>
+    </div>
+
+    <div id="pointer-hint">CLIQUE PARA CAPTURAR O MOUSE</div>
+
+    <div id="center-msg"></div>
+
+    <div id="ui">
+        <div id="stats">
+            <div id="health" class="stat">
+                <div class="stat-icon">❤</div>
+                <span id="health-val">100%</span>
+            </div>
+            <div id="ammo" class="stat">
+                <div class="stat-icon">🔫</div>
+                <span id="ammo-val">50</span>
+            </div>
+        </div>
+        <div id="health-bar-wrap">
+            <div id="health-bar" style="width:100%"></div>
+        </div>
+        <div id="weapon-container">
+            <img id="weapon"
+                 src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='100' viewBox='0 0 200 100'><rect x='50' y='20' width='100' height='30' fill='%23333' rx='5'/><rect x='140' y='25' width='40' height='20' fill='%23555' rx='3'/><rect x='40' y='30' width='20' height='10' fill='%23555'/><rect x='30' y='35' width='10' height='5' fill='%23777'/><rect x='80' y='50' width='30' height='15' fill='%23444' rx='2'/></svg>"
+                 alt="Arma">
+        </div>
+        <div id="level-info">
+            NÍVEL: <span id="level-num">1</span><br>
+            INIMIGOS: <span id="enemy-count">5</span>
+        </div>
+    </div>
+
+    <!-- Tela inicial -->
+    <div id="start-screen">
+        <div id="title">☠ DEVIL WAR DOOM ☠</div>
+        <div id="subtitle">Labirinto Infernal</div>
+        <div id="instructions">
+            <span class="key-hint">W A S D</span> Mover &nbsp;
+            <span class="key-hint">MOUSE</span> Mirar &nbsp;
+            <span class="key-hint">CLICK</span> Atirar<br><br>
+            <span class="key-hint">SHIFT</span> Correr &nbsp;
+            <span class="key-hint">E</span> Interagir com portas &nbsp;
+            <span class="key-hint">R</span> Recarregar<br><br>
+            Sobreviva aos demônios e encontre a <span style="color:#0ff">SAÍDA</span> do labirinto!
+        </div>
+        <button id="start-button">⚔ INICIAR JOGO</button>
+    </div>
+
+    <!-- Game Over -->
+    <div id="game-over">
+        <h2>☠ MISSÃO FALHADA ☠</h2>
+        <p>Você foi derrotado pelas forças do mal!</p>
+        <p id="go-score" style="color:#f556; margin-top:8px; font-size:14px;"></p>
+        <button class="menu-btn" id="restart-button">↺ TENTAR NOVAMENTE</button>
+    </div>
+
+    <!-- Level Complete -->
+    <div id="level-complete">
+        <h2>✔ NÍVEL COMPLETO!</h2>
+        <p>Você sobreviveu aos horrores do inferno!</p>
+        <div class="score-box" id="lc-score"></div>
+        <button class="menu-btn" id="next-button">⮞ PRÓXIMO NÍVEL</button>
+    </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════
+//  DEVIL WAR DOOM — versão corrigida + melhorada
+// ════════════════════════════════════════════════
+
+const canvas       = document.getElementById('game-canvas');
+const ctx          = canvas.getContext('2d', { alpha: false });
+const miniMapCanvas= document.getElementById('mini-map');
+const miniMapCtx   = miniMapCanvas.getContext('2d');
+const startScreen  = document.getElementById('start-screen');
+const startButton  = document.getElementById('start-button');
+const healthVal    = document.getElementById('health-val');
+const ammoVal      = document.getElementById('ammo-val');
+const healthBar    = document.getElementById('health-bar');
+const weaponImg    = document.getElementById('weapon');
+const loadingScreen= document.getElementById('loading');
+const loadingBarEl = document.getElementById('loading-bar');
+const loadingText  = document.getElementById('loading-text');
+const crosshair    = document.getElementById('crosshair');
+const gameOverEl   = document.getElementById('game-over');
+const levelCompleteEl = document.getElementById('level-complete');
+const restartBtn   = document.getElementById('restart-button');
+const nextBtn      = document.getElementById('next-button');
+const fpsCounter   = document.getElementById('fps-counter');
+const killCounter  = document.getElementById('kill-counter');
+const centerMsg    = document.getElementById('center-msg');
+const damageFlash  = document.getElementById('damage-flash');
+const pointerHint  = document.getElementById('pointer-hint');
+const levelNumEl   = document.getElementById('level-num');
+const enemyCountEl = document.getElementById('enemy-count');
+const goScore      = document.getElementById('go-score');
+const lcScore      = document.getElementById('lc-score');
+
+// ══ Canvas ══
+function resizeCanvas() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+    miniMapCanvas.width  = 150;
+    miniMapCanvas.height = 150;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// ══ Mapa ══
+const mapSize = 24;
+
+const BASE_MAP = [
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,0,0,0,1],
+    [1,0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,0,1,0,0,0,1],
+    [1,0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,0,1,0,0,0,1],
+    [1,0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,0,1,0,0,0,1],
+    [1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1],
+    [1,0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,0,1,0,0,0,1],
+    [1,0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,0,1,0,0,0,1],
+    [1,0,0,0,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,0,0,0,1],
+    [1,0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,0,1,0,0,0,1],
+    [1,0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,0,1,0,0,0,1],
+    [1,0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,0,1,0,0,0,1],
+    [1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1],
+    [1,0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,0,1,0,0,0,1],
+    [1,0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,0,1,0,0,0,1],
+    [1,0,0,0,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+];
+
+// Extras de parede e texturas diferentes por nível
+const LEVEL_EXTRAS = [
+    // Nível 1
+    [
+        [2,4,1],[2,5,1],[2,6,1],
+        [4,8,1],[5,8,1],[6,8,1],
+        [8,12,1],[8,13,1],[8,14,1],
+        [10,16,1],[11,16,1],[12,16,1],
+        [14,10,1],[15,10,1],[16,10,1],
+        [18,6,1],[19,6,1],[20,6,1],
+        [16,18,1],[16,19,1],[16,20,1],
+        [20,14,1],[20,15,1],[20,16,1],
+        [5,15,2],[6,15,2],[7,15,2],
+        [15,5,3],[15,6,3],[15,7,3],
+        [18,12,2],[19,12,2],[20,12,2],
+    ],
+    // Nível 2 — mais paredes
+    [
+        [2,4,1],[2,5,1],[2,8,1],[2,9,1],
+        [4,8,2],[5,8,2],[6,8,2],[7,8,2],
+        [8,10,1],[8,11,1],[8,14,1],[8,15,1],
+        [10,16,3],[11,16,3],[12,16,3],[13,16,3],
+        [14,10,1],[15,10,1],[16,10,1],[17,10,1],
+        [18,4,1],[19,4,1],[20,4,1],
+        [5,20,2],[6,20,2],[7,20,2],
+        [20,14,1],[20,15,1],[20,16,1],[20,17,1],
+        [3,13,3],[4,13,3],[5,13,3],
+        [10,2,2],[11,2,2],[12,2,2],
+    ],
+    // Nível 3 — labirinto denso
+    [
+        [2,4,1],[2,5,1],[2,6,1],[2,7,1],
+        [4,8,2],[5,8,2],[6,8,2],[7,8,2],[8,8,2],
+        [8,10,3],[8,11,3],[8,14,3],[8,15,3],
+        [10,16,1],[11,16,1],[12,16,1],[13,16,1],[14,16,1],
+        [14,10,2],[15,10,2],[16,10,2],[17,10,2],
+        [18,4,3],[19,4,3],[20,4,3],
+        [5,20,1],[6,20,1],[7,20,1],
+        [20,14,1],[20,15,1],[20,16,1],[20,17,1],[20,18,1],
+        [3,13,2],[4,13,2],[5,13,2],
+        [10,2,3],[11,2,3],[12,2,3],
+        [2,18,1],[3,18,1],[4,18,1],
+        [6,3,2],[7,3,2],[8,3,2],
+        [17,17,3],[17,18,3],[17,19,3],
+    ],
+];
+
+const LEVEL_ENEMIES = [
+    // Nível 1
+    [
+        {x:5.5,  y:5.5,  type:1, health:30, speed:0.025},
+        {x:15.5, y:5.5,  type:1, health:30, speed:0.025},
+        {x:5.5,  y:15.5, type:1, health:30, speed:0.025},
+        {x:18.5, y:18.5, type:2, health:50, speed:0.035},
+        {x:10.5, y:20.5, type:1, health:30, speed:0.025},
+    ],
+    // Nível 2
+    [
+        {x:5.5,  y:5.5,  type:1, health:35, speed:0.03},
+        {x:15.5, y:5.5,  type:1, health:35, speed:0.03},
+        {x:5.5,  y:15.5, type:1, health:35, speed:0.03},
+        {x:18.5, y:18.5, type:2, health:60, speed:0.04},
+        {x:10.5, y:20.5, type:1, health:35, speed:0.03},
+        {x:20.5, y:10.5, type:2, health:60, speed:0.04},
+        {x:12.5, y:12.5, type:1, health:35, speed:0.03},
+    ],
+    // Nível 3
+    [
+        {x:5.5,  y:5.5,  type:1, health:40, speed:0.035},
+        {x:15.5, y:5.5,  type:2, health:70, speed:0.045},
+        {x:5.5,  y:15.5, type:1, health:40, speed:0.035},
+        {x:18.5, y:18.5, type:2, health:70, speed:0.045},
+        {x:10.5, y:20.5, type:1, health:40, speed:0.035},
+        {x:20.5, y:10.5, type:2, health:70, speed:0.045},
+        {x:12.5, y:12.5, type:1, health:40, speed:0.035},
+        {x:3.5,  y:20.5, type:1, health:40, speed:0.035},
+        {x:20.5, y:3.5,  type:2, health:70, speed:0.045},
+    ],
+];
+
+const LEVEL_DOORS = [
+    [{x:8, y:10}, {x:15, y:15}, {x:20, y:8}],
+    [{x:8, y:10}, {x:15, y:15}, {x:20, y:8}, {x:10, y:5}],
+    [{x:8, y:10}, {x:15, y:15}, {x:20, y:8}, {x:10, y:5}, {x:5, y:20}],
+];
+
+// ══ Estado ══
+let currentLevel = 0;
+let map = [];
+let enemies = [];
+let doors   = [];
+let killCount = 0;
+let totalKills = 0;
+
+let player = {
+    x:1.5, y:1.5, angle:0,
+    health:100, ammo:50,
+    speed:0.1, runSpeed:0.18,
+    turnSpeed:0.05, isRunning:false,
+    velocity:{x:0, y:0},
+    friction:0.82, acceleration:0.18
+};
+
+let keys  = {};
+let mouse = {x:0, y:0, down:false};
+let gameRunning   = false;
+let lastTime      = 0;
+let isFiring      = false;
+let fireAnimTimer = 0;
+let frameCount    = 0;
+let lastFpsUpdate = 0;
+let currentFps    = 0;
+let centerMsgTimer= 0;
+
+// ══ Construir mapa do nível ══
+function buildMap(lvl) {
+    map = BASE_MAP.map(row => [...row]);
+    const extras = LEVEL_EXTRAS[Math.min(lvl, LEVEL_EXTRAS.length-1)];
+    for (const [r,c,v] of extras) map[r][c] = v;
+    map[22][22] = 9; // saída
+}
+
+function buildEnemies(lvl) {
+    const src = LEVEL_ENEMIES[Math.min(lvl, LEVEL_ENEMIES.length-1)];
+    enemies = src.map(e => ({...e, lastAttack:0}));
+    enemyCountEl.textContent = enemies.length;
+}
+
+function buildDoors(lvl) {
+    const src = LEVEL_DOORS[Math.min(lvl, LEVEL_DOORS.length-1)];
+    doors = src.map(d => ({x:d.x, y:d.y, isOpen:false, animation:0}));
+}
+
+// ══ Iniciar nível ══
+function startLevel(lvl) {
+    currentLevel = lvl;
+    buildMap(lvl);
+    buildEnemies(lvl);
+    buildDoors(lvl);
+
+    player.x=1.5; player.y=1.5; player.angle=0;
+    player.health=100; player.ammo=50;
+    player.velocity.x=0; player.velocity.y=0;
+
+    healthVal.textContent = '100%';
+    ammoVal.textContent   = '50';
+    healthBar.style.width = '100%';
+    levelNumEl.textContent = lvl + 1;
+    enemyCountEl.textContent = enemies.length;
+
+    gameOverEl.style.display       = 'none';
+    levelCompleteEl.style.display  = 'none';
+
+    gameRunning = true;
+    lastTime = 0;
+    requestAnimationFrame(gameLoop);
+}
+
+// ══ Controles ══
+window.addEventListener('keydown', e => {
+    keys[e.key.toLowerCase()] = true;
+    if (e.key === 'Shift') player.isRunning = true;
+    // Recarregar
+    if (e.key.toLowerCase() === 'r' && player.ammo < 50) {
+        player.ammo = 50;
+        ammoVal.textContent = '50';
+        showMsg('RECARREGADO!', 1.0);
+    }
+    e.preventDefault();
+});
+
+window.addEventListener('keyup', e => {
+    keys[e.key.toLowerCase()] = false;
+    if (e.key === 'Shift') player.isRunning = false;
+});
+
+// Mouse relativo (pointer lock)
+canvas.addEventListener('mousemove', e => {
+    if (document.pointerLockElement === canvas) {
+        mouse.x = e.movementX;
+    } else {
+        mouse.x = 0;
+    }
+});
+
+canvas.addEventListener('mousedown', () => { mouse.down = true; });
+canvas.addEventListener('mouseup',   () => { mouse.down = false; });
+
+canvas.addEventListener('click', () => {
+    if (gameRunning) canvas.requestPointerLock();
+});
+
+document.addEventListener('pointerlockchange', () => {
+    pointerHint.style.display =
+        document.pointerLockElement === canvas ? 'none' : 'block';
+});
+
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+// ══ Som sintético ══
+let audioCtx = null;
+
+function getAudioCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+}
+
+function playTone(freq, type, duration, vol=0.3, freqEnd=null) {
+    try {
+        const ac  = getAudioCtx();
+        const osc = ac.createOscillator();
+        const gain= ac.createGain();
+        osc.connect(gain); gain.connect(ac.destination);
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ac.currentTime);
+        if (freqEnd !== null)
+            osc.frequency.exponentialRampToValueAtTime(freqEnd, ac.currentTime + duration);
+        gain.gain.setValueAtTime(vol, ac.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + duration);
+        osc.start(); osc.stop(ac.currentTime + duration);
+    } catch(e) {}
+}
+
+function playSound(name) {
+    switch(name) {
+        case 'shoot':      playTone(880, 'sawtooth', 0.12, 0.4, 220); break;
+        case 'hurt':       playTone(220, 'square',   0.2,  0.3, 110); break;
+        case 'enemyDeath': playTone(440, 'sawtooth', 0.25, 0.35,110); break;
+        case 'door':       playTone(300, 'sine',     0.3,  0.2, 150); break;
+        case 'noAmmo':     playTone(110, 'square',   0.15, 0.2       ); break;
+    }
+}
+
+// ══ Colisão ══
+function isColliding(x, y) {
+    const margin = 0.3;
+    for (let dx of [-margin, margin]) {
+        for (let dy of [-margin, margin]) {
+            const mx = Math.floor(x + dx);
+            const my = Math.floor(y + dy);
+            if (mx < 0 || mx >= mapSize || my < 0 || my >= mapSize) return true;
+            if (map[my][mx] > 0 && map[my][mx] < 9) return true;
+            for (const door of doors)
+                if (!door.isOpen && Math.floor(door.x)===mx && Math.floor(door.y)===my) return true;
+        }
+    }
+    return false;
+}
+
+// ══ Interagir ══
+function interact() {
+    for (const door of doors) {
+        const dx = door.x + 0.5 - player.x;
+        const dy = door.y + 0.5 - player.y;
+        if (Math.sqrt(dx*dx+dy*dy) < 1.6) {
+            door.isOpen = !door.isOpen;
+            playSound('door');
+            showMsg(door.isOpen ? 'PORTA ABERTA' : 'PORTA FECHADA', 1.0);
+            return;
+        }
+    }
+}
+
+// ══ Mensagem central temporária ══
+function showMsg(text, duration) {
+    centerMsg.textContent = text;
+    centerMsg.style.opacity = '1';
+    centerMsgTimer = duration;
+}
+
+// ══ Game Over / Level Complete ══
+function gameOver() {
+    gameRunning = false;
+    gameOverEl.style.display = 'flex';
+    goScore.textContent = `Mortos: ${killCount} | Nível: ${currentLevel+1}`;
+}
+
+function levelComplete() {
+    gameRunning = false;
+    levelCompleteEl.style.display = 'flex';
+    totalKills += killCount;
+    lcScore.innerHTML =
+        `Mortos neste nível: ${killCount}<br>Total de mortos: ${totalKills}<br>Nível ${currentLevel+1} concluído!`;
+}
+
+// ══ Update ══
+function update(dt) {
+    // FPS
+    frameCount++;
+    const now = performance.now();
+    if (now - lastFpsUpdate >= 1000) {
+        currentFps   = frameCount;
+        frameCount   = 0;
+        lastFpsUpdate= now;
+        fpsCounter.textContent = `FPS: ${currentFps}`;
+    }
+
+    // Mensagem central
+    if (centerMsgTimer > 0) {
+        centerMsgTimer -= dt / 1000;
+        if (centerMsgTimer <= 0) centerMsg.style.opacity = '0';
+    }
+
+    // Rotação com mouse (pointer lock)
+    if (document.pointerLockElement === canvas) {
+        player.angle += mouse.x * 0.003;
+    }
+    mouse.x = 0;
+
+    // Movimento com física
+    const spd = player.isRunning ? player.runSpeed : player.speed;
+    let ax = 0, ay = 0;
+
+    if (keys['w'] || keys['arrowup'])    { ax += Math.cos(player.angle) * player.acceleration; ay += Math.sin(player.angle) * player.acceleration; }
+    if (keys['s'] || keys['arrowdown'])  { ax -= Math.cos(player.angle) * player.acceleration; ay -= Math.sin(player.angle) * player.acceleration; }
+    if (keys['a'] || keys['arrowleft'])  { ax += Math.cos(player.angle - Math.PI/2) * player.acceleration; ay += Math.sin(player.angle - Math.PI/2) * player.acceleration; }
+    if (keys['d'] || keys['arrowright']) { ax += Math.cos(player.angle + Math.PI/2) * player.acceleration; ay += Math.sin(player.angle + Math.PI/2) * player.acceleration; }
+
+    player.velocity.x = (player.velocity.x + ax) * player.friction;
+    player.velocity.y = (player.velocity.y + ay) * player.friction;
+
+    // Limitar velocidade
+    const speed = Math.hypot(player.velocity.x, player.velocity.y);
+    const maxSpd = spd * 1.5;
+    if (speed > maxSpd) {
+        player.velocity.x = player.velocity.x / speed * maxSpd;
+        player.velocity.y = player.velocity.y / speed * maxSpd;
+    }
+
+    // Colisão separada por eixo
+    const nx = player.x + player.velocity.x;
+    if (!isColliding(nx, player.y)) player.x = nx; else player.velocity.x = 0;
+    const ny = player.y + player.velocity.y;
+    if (!isColliding(player.x, ny)) player.y = ny; else player.velocity.y = 0;
+
+    // Interagir
+    if (keys['e']) { interact(); keys['e'] = false; }
+
+    // Atirar
+    if (mouse.down && !isFiring) {
+        if (player.ammo > 0) {
+            player.ammo--;
+            ammoVal.textContent = player.ammo;
+            isFiring = true;
+            fireAnimTimer = 0.18;
+            weaponImg.classList.add('firing');
+            playSound('shoot');
+
+            // Hit scan
+            let hit = false;
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const e  = enemies[i];
+                const dx = e.x - player.x;
+                const dy = e.y - player.y;
+                const dist = Math.hypot(dx, dy);
+                const angleToEnemy = Math.atan2(dy, dx);
+                let diff = angleToEnemy - player.angle;
+                while (diff >  Math.PI) diff -= 2*Math.PI;
+                while (diff < -Math.PI) diff += 2*Math.PI;
+
+                if (dist < 12 && Math.abs(diff) < 0.25) {
+                    const dmg = 15 + Math.random() * 10 | 0;
+                    e.health -= dmg;
+                    crosshair.classList.add('hit');
+                    setTimeout(() => crosshair.classList.remove('hit'), 120);
+                    if (e.health <= 0) {
+                        playSound('enemyDeath');
+                        enemies.splice(i, 1);
+                        killCount++;
+                        killCounter.textContent = `☠ MORTOS: ${killCount}`;
+                        killCounter.classList.add('flash');
+                        setTimeout(() => killCounter.classList.remove('flash'), 300);
+                        enemyCountEl.textContent = enemies.length;
+                    }
+                    hit = true;
+                    break;
+                }
+            }
+            if (!hit) {} // miss — efeito visual futuro
+        } else {
+            playSound('noAmmo');
+            showMsg('SEM MUNIÇÃO! [R] RECARREGAR', 1.5);
+        }
+        mouse.down = false;
+    }
+
+    // Animação de tiro
+    if (isFiring) {
+        fireAnimTimer -= dt / 1000;
+        if (fireAnimTimer <= 0) { isFiring = false; weaponImg.classList.remove('firing'); }
+    }
+
+    // Inimigos
+    for (let i = 0; i < enemies.length; i++) {
+        const e  = enemies[i];
+        const dx = player.x - e.x;
+        const dy = player.y - e.y;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist < 12) {
+            const angle = Math.atan2(dy, dx);
+            const nx2 = e.x + Math.cos(angle) * e.speed;
+            const ny2 = e.y + Math.sin(angle) * e.speed;
+
+            // Colisão simples de inimigos com paredes
+            if (!isColliding(nx2, e.y)) e.x = nx2;
+            if (!isColliding(e.x, ny2)) e.y = ny2;
+
+            // Ataque ao jogador
+            if (dist < 0.8 && now - e.lastAttack > 900) {
+                const dmg = e.type === 2 ? 8 : 5;
+                player.health -= dmg;
+                player.health = Math.max(0, player.health);
+                healthVal.textContent = Math.floor(player.health) + '%';
+                healthBar.style.width = player.health + '%';
+                e.lastAttack = now;
+                playSound('hurt');
+                damageFlash.classList.add('active');
+                setTimeout(() => damageFlash.classList.remove('active'), 150);
+                // knockback
+                player.velocity.x -= Math.cos(angle) * 0.12;
+                player.velocity.y -= Math.sin(angle) * 0.12;
+                if (player.health <= 0) { gameOver(); return; }
+            }
+        }
+    }
+
+    // Atualizar portas
+    for (const door of doors) {
+        if (door.isOpen && door.animation < 1) { door.animation = Math.min(1, door.animation + 0.06); }
+        else if (!door.isOpen && door.animation > 0) { door.animation = Math.max(0, door.animation - 0.06); }
+    }
+
+    // Saída
+    if (Math.floor(player.x) === 22 && Math.floor(player.y) === 22) {
+        levelComplete();
+    }
+}
+
+// ══ Render ══
+function render() {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Céu
+    const sky = ctx.createLinearGradient(0, 0, 0, canvas.height/2);
+    sky.addColorStop(0, '#0a0010');
+    sky.addColorStop(1, '#200018');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, canvas.width, canvas.height/2);
+
+    // Chão
+    const floor = ctx.createLinearGradient(0, canvas.height/2, 0, canvas.height);
+    floor.addColorStop(0, '#1a0a00');
+    floor.addColorStop(1, '#0a0500');
+    ctx.fillStyle = floor;
+    ctx.fillRect(0, canvas.height/2, canvas.width, canvas.height/2);
+
+    // Raycasting
+    const fov       = Math.PI / 3;
+    const rayCount  = Math.min(canvas.width, 600);
+    const rayStep   = fov / rayCount;
+    const colW      = canvas.width / rayCount;
+
+    // Buffer de profundidade para sprites
+    const zBuffer   = new Float32Array(rayCount);
+
+    for (let i = 0; i < rayCount; i++) {
+        const rayAngle = player.angle - fov/2 + i * rayStep;
+        let dist = 0;
+        let hitWall  = false;
+        let wallType = 0;
+        let side     = 0; // 0=vertical, 1=horizontal
+
+        while (!hitWall && dist < 20) {
+            dist += 0.04;
+            const rx = player.x + Math.cos(rayAngle) * dist;
+            const ry = player.y + Math.sin(rayAngle) * dist;
+            const mx = Math.floor(rx);
+            const my = Math.floor(ry);
+
+            if (mx < 0 || mx >= mapSize || my < 0 || my >= mapSize) {
+                hitWall  = true; wallType = 1;
+            } else if (map[my][mx] !== 0) {
+                hitWall  = true; wallType = map[my][mx];
+                // Detectar lado
+                const prevRx = player.x + Math.cos(rayAngle) * (dist - 0.04);
+                const prevRy = player.y + Math.sin(rayAngle) * (dist - 0.04);
+                side = (Math.floor(prevRx) !== mx) ? 0 : 1;
+            } else {
+                for (const door of doors) {
+                    if (Math.floor(door.x)===mx && Math.floor(door.y)===my && door.animation < 0.9) {
+                        hitWall = true; wallType = 5; break;
+                    }
+                }
+            }
+        }
+
+        const corrDist = dist * Math.cos(rayAngle - player.angle);
+        zBuffer[i] = corrDist;
+
+        const wallH   = (canvas.height / corrDist) * 0.8;
+        const dark    = Math.min(1, corrDist / 14);
+        const sideDim = side === 1 ? 0.65 : 1.0;
+
+        let r=0, g=0, b=0;
+        switch(wallType) {
+            case 1: r=Math.floor(160*(1-dark)*sideDim); g=0;                               b=0;                               break; // vermelho
+            case 2: r=0;                               g=Math.floor(120*(1-dark)*sideDim); b=0;                               break; // verde
+            case 3: r=0;                               g=0;                               b=Math.floor(160*(1-dark)*sideDim); break; // azul
+            case 5: r=Math.floor(120*(1-dark)*sideDim); g=Math.floor(80*(1-dark)*sideDim); b=Math.floor(30*(1-dark)*sideDim); break; // porta
+            case 9: r=0;                               g=Math.floor(220*(1-dark)*sideDim); b=Math.floor(220*(1-dark)*sideDim);break; // saída
+            default:r=Math.floor(100*(1-dark)*sideDim); g=0;                               b=0;
+        }
+
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
+        ctx.fillRect(i * colW, canvas.height/2 - wallH/2, colW + 1, wallH);
+    }
+
+    // Inimigos (sprites simples ordenados por distância)
+    const sortedEnemies = [...enemies].sort((a,b) => {
+        const da = Math.hypot(a.x-player.x, a.y-player.y);
+        const db = Math.hypot(b.x-player.x, b.y-player.y);
+        return db - da;
+    });
+
+    for (const e of sortedEnemies) {
+        const dx   = e.x - player.x;
+        const dy   = e.y - player.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < 0.5 || dist > 12) continue;
+
+        const angleToEnemy = Math.atan2(dy, dx);
+        let diff = angleToEnemy - player.angle;
+        while (diff >  Math.PI) diff -= 2*Math.PI;
+        while (diff < -Math.PI) diff += 2*Math.PI;
+
+        if (Math.abs(diff) >= fov/2 + 0.1) continue;
+
+        const screenX  = (diff / fov + 0.5) * canvas.width;
+        const size     = (canvas.height / dist) * 0.75;
+        const bright   = Math.max(0, 1 - dist/12);
+        const spriteCol= Math.floor(screenX / (canvas.width / rayCount));
+
+        // Checar z-buffer
+        if (spriteCol >= 0 && spriteCol < rayCount && zBuffer[spriteCol] < dist) continue;
+
+        const sx = screenX - size/2;
+        const sy = canvas.height/2 - size/2;
+
+        if (e.type === 1) {
+            // Corpo vermelho
+            ctx.fillStyle = `rgba(${Math.floor(200*bright)},0,0,0.95)`;
+            ctx.fillRect(sx + size*0.2, sy + size*0.35, size*0.6, size*0.65);
+            // Cabeça
+            ctx.fillStyle = `rgba(${Math.floor(180*bright)},${Math.floor(80*bright)},0,0.95)`;
+            ctx.beginPath();
+            ctx.arc(screenX, sy + size*0.22, size*0.2, 0, Math.PI*2);
+            ctx.fill();
+            // Olhos
+            ctx.fillStyle = `rgba(255,${Math.floor(200*bright)},0,0.9)`;
+            ctx.fillRect(screenX - size*0.1, sy + size*0.15, size*0.06, size*0.06);
+            ctx.fillRect(screenX + size*0.04, sy + size*0.15, size*0.06, size*0.06);
+        } else {
+            // Tipo 2 — maior e laranja
+            ctx.fillStyle = `rgba(${Math.floor(220*bright)},${Math.floor(100*bright)},0,0.95)`;
+            ctx.fillRect(sx + size*0.1, sy + size*0.3, size*0.8, size*0.7);
+            ctx.fillStyle = `rgba(${Math.floor(200*bright)},${Math.floor(60*bright)},0,0.95)`;
+            ctx.beginPath();
+            ctx.arc(screenX, sy + size*0.18, size*0.25, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = `rgba(255,${Math.floor(220*bright)},0,0.9)`;
+            ctx.fillRect(screenX - size*0.12, sy + size*0.12, size*0.07, size*0.07);
+            ctx.fillRect(screenX + size*0.05, sy + size*0.12, size*0.07, size*0.07);
+        }
+
+        // Barra de vida do inimigo
+        const maxHp = e.type === 2 ? 70 : 40; // aproximado — ajuste por nível é feito na geração
+        const hpRatio = Math.max(0, e.health) / maxHp;
+        ctx.fillStyle = '#333';
+        ctx.fillRect(sx, sy - 8, size, 5);
+        ctx.fillStyle = hpRatio > 0.5 ? '#0f0' : hpRatio > 0.25 ? '#ff0' : '#f00';
+        ctx.fillRect(sx, sy - 8, size * hpRatio, 5);
+    }
+
+    renderMiniMap();
+}
+
+// ══ Mini-mapa ══
+function renderMiniMap() {
+    miniMapCtx.fillStyle = '#000c';
+    miniMapCtx.fillRect(0, 0, miniMapCanvas.width, miniMapCanvas.height);
+
+    const cellSize = Math.min(miniMapCanvas.width / mapSize, miniMapCanvas.height / mapSize);
+    const offX = (miniMapCanvas.width  - mapSize * cellSize) / 2;
+    const offY = (miniMapCanvas.height - mapSize * cellSize) / 2;
+
+    for (let y = 0; y < mapSize; y++) {
+        for (let x = 0; x < mapSize; x++) {
+            if (map[y][x] > 0) {
+                miniMapCtx.fillStyle =
+                    map[y][x] === 9 ? '#0ff' :
+                    map[y][x] === 2 ? '#090' :
+                    map[y][x] === 3 ? '#009' : '#900';
+                miniMapCtx.fillRect(offX + x*cellSize, offY + y*cellSize, cellSize, cellSize);
+            }
+        }
+    }
+
+    // Portas
+    for (const door of doors) {
+        miniMapCtx.globalAlpha = door.isOpen ? 0.3 : 0.9;
+        miniMapCtx.fillStyle = '#963';
+        miniMapCtx.fillRect(offX + door.x*cellSize, offY + door.y*cellSize, cellSize, cellSize);
+        miniMapCtx.globalAlpha = 1;
+    }
+
+    // Inimigos
+    miniMapCtx.fillStyle = '#f00';
+    for (const e of enemies) {
+        miniMapCtx.beginPath();
+        miniMapCtx.arc(offX + e.x*cellSize, offY + e.y*cellSize, cellSize*0.6, 0, Math.PI*2);
+        miniMapCtx.fill();
+    }
+
+    // Jogador
+    miniMapCtx.fillStyle = '#0f0';
+    miniMapCtx.beginPath();
+    miniMapCtx.arc(offX + player.x*cellSize, offY + player.y*cellSize, cellSize*0.7, 0, Math.PI*2);
+    miniMapCtx.fill();
+
+    // Direção
+    miniMapCtx.strokeStyle = '#0f0';
+    miniMapCtx.lineWidth = 1;
+    miniMapCtx.beginPath();
+    miniMapCtx.moveTo(offX + player.x*cellSize, offY + player.y*cellSize);
+    miniMapCtx.lineTo(
+        offX + (player.x + Math.cos(player.angle)*1.5)*cellSize,
+        offY + (player.y + Math.sin(player.angle)*1.5)*cellSize
+    );
+    miniMapCtx.stroke();
+}
+
+// ══ Game Loop ══
+function gameLoop(ts) {
+    if (!gameRunning) return;
+    if (!lastTime) lastTime = ts;
+    const dt = Math.min(ts - lastTime, 80); // cap para evitar saltos grandes
+    lastTime = ts;
+    update(dt);
+    render();
+    requestAnimationFrame(gameLoop);
+}
+
+// ══ Botões ══
+startButton.addEventListener('click', () => {
+    startScreen.style.display = 'none';
+    crosshair.style.display   = 'block';
+    pointerHint.style.display = 'block';
+    killCount = 0;
+    totalKills = 0;
+    killCounter.textContent = '☠ MORTOS: 0';
+    startLevel(0);
+    canvas.requestPointerLock();
+});
+
+restartBtn.addEventListener('click', () => {
+    killCount = 0;
+    killCounter.textContent = '☠ MORTOS: 0';
+    startLevel(currentLevel);
+    canvas.requestPointerLock();
+});
+
+nextBtn.addEventListener('click', () => {
+    const next = (currentLevel + 1) % LEVEL_ENEMIES.length;
+    killCount = 0;
+    startLevel(next);
+    canvas.requestPointerLock();
+});
+
+// ══ Loading simulado ══
+let loadPct = 0;
+const loadInterval = setInterval(() => {
+    loadPct += Math.random() * 25 + 10;
+    if (loadPct >= 100) {
+        loadPct = 100;
+        clearInterval(loadInterval);
+        setTimeout(() => {
+            loadingScreen.style.display = 'none';
+            startScreen.style.display  = 'flex';
+        }, 400);
+    }
+    loadingBarEl.style.width = loadPct + '%';
+    loadingText.textContent  = `CARREGANDO... ${Math.floor(loadPct)}%`;
+}, 300);
+</script>
+</body>
+</html>
