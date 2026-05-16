@@ -1,5 +1,5 @@
-# Jogo-indie3D
-Projeto de jogo indie para estudo
+# Jogo-amador3D
+Projeto de jogo amador para estudo
 
 # DEVIL WAR DOOM
 
